@@ -22,8 +22,9 @@ Array<int, 3, 1> RED{{255, 0, 0}};
 Array<int, 3, 1> GREEN{{0, 255, 0}};
 Array<int, 3, 1> BLUE{{0, 0, 255}};
 
-unordered_map<string, Matrix<float, 2, 1>> RemoveResultVectors(unordered_map<string, Matrix<float, 2, 1>> arrayOfVectors) {
-    unordered_map<string, Matrix<float, 2, 1>>::const_iterator got = arrayOfVectors.find("result");
+unordered_map<string, Matrix<float, 3, 1>>
+RemoveResultVectors(unordered_map<string, Matrix<float, 3, 1>> arrayOfVectors) {
+    unordered_map<string, Matrix<float, 3, 1>>::const_iterator got = arrayOfVectors.find("result");
     if (got != arrayOfVectors.end()) {
         //printf("array removed");
         arrayOfVectors.erase("result");
@@ -89,9 +90,13 @@ void Application::setRenderer(SDL_Renderer *renderer) {
 }
 
 int Application::Run() {
-    LAVector3d *vec1 = new LAVector3d({0, 200});
-    LAVector3d *vec2 = new LAVector3d({200, 0});
-    unordered_map<string, Matrix<float, 2, 1>> arrayOfVectors;
+    LAVector3d *vec1 = new LAVector3d({20, 20, 0});
+    LAVector3d *vec2 = new LAVector3d(vec1, {30, 30, 0});
+
+    vectorList.insert(vectorList.end(),vec1);
+    vectorList.insert(vectorList.end(),vec2);
+
+    unordered_map<string, Matrix<float, 3, 1>> arrayOfVectors;
 
     if (this->getWindow() == NULL) {
         printf("Coundn't initialize window");
@@ -100,7 +105,12 @@ int Application::Run() {
     SDL_Event event;
     int count = 0;
     bool showTransformationMatrix = false;
+    Uint64 start;
+    Uint64 end;
+    float elapsedMS;
     while (this->getRunning()) {
+        start = SDL_GetPerformanceCounter();
+
         RemoveResultVectors(arrayOfVectors);
         if (count < 360) {
             //printf("counter %i", count);
@@ -111,15 +121,16 @@ int Application::Run() {
 
         float degree = (count * (M_PI / 180.0));
 
-        Matrix<float, 2, 2> transformationMatrix
-                {{(float) cos(degree), (float) -sin(degree)},
-                 {(float) sin(degree), (float) cos(degree)}};
+        Matrix<float, 3, 3> transformationMatrix
+                {{(float) 1, 0, 0},
+                 {0, (float) cos(degree), (float) -sin(degree)},
+                 {0, (float) sin(degree), (float) cos(degree)}};
 
         SDL_Texture *texture = SDL_CreateTexture(this->getRenderer(), SDL_PIXELFORMAT_RGBA8888,
                                                  SDL_TEXTUREACCESS_TARGET, 50, 10);
         if (!arrayOfVectors.count("vec1")) {
-            arrayOfVectors.insert(pair<string, Matrix<float, 2, 1>>{"vec1", vec1->getTip()});
-            arrayOfVectors.insert(pair<string, Matrix<float, 2, 1>>{"vec2", vec2->getTip()});
+            arrayOfVectors.insert(pair<string, Matrix<float, 3, 1>>{"vec1", vec1->getTip()});
+            arrayOfVectors.insert(pair<string, Matrix<float, 3, 1>>{"vec2", vec2->getTip()});
         }
 
 
@@ -132,7 +143,7 @@ int Application::Run() {
                 case SDL_SCANCODE_P:
                     if (!arrayOfVectors.count("result")) {
                         arrayOfVectors.insert(
-                                pair<string, Matrix<float, 2, 1>>{"result", vec1->getTip() + vec2->getTip()});
+                                pair<string, Matrix<float, 3, 1>>{"result", vec1->getTip() + vec2->getTip()});
                     }
                     break;
 
@@ -143,7 +154,6 @@ int Application::Run() {
 
                 case SDL_SCANCODE_T:
                     printf("Transforming vectors");
-                    RemoveResultVectors(arrayOfVectors);
                     showTransformationMatrix = true;
                     break;
 
@@ -152,27 +162,28 @@ int Application::Run() {
         SDL_SetRenderDrawColor(this->getRenderer(), 0, 255, 0, SDL_ALPHA_OPAQUE);
         this->PrintGrid(this->getRenderer());
 
-        if (showTransformationMatrix) {
-            Matrix<float, 2, 1> result = transformationMatrix * vec1->getTip();
-            arrayOfVectors = RemoveResultVectors(arrayOfVectors);
-            arrayOfVectors.insert(pair<string, Matrix<float, 2, 1>>{"result", result});
-            printf("\n %f %f \n", result(0), result(1));
-        }
-
-
-        for (pair<string, Array<float, 2, 1>> vect: arrayOfVectors) {
-            printf("%s \n ", vect.first.c_str());
-            if (vect.first == "result") {
-                printf("\n %f %f \n", vect.second(0), vect.second(1));
-                vec1->RenderDrawLine(this->getRenderer(), vect.second, BLUE);
-            } else {
-                vec1->RenderDrawLine(this->getRenderer(), vect.second, RED);
+        if (true) {
+            std::list<LAVector3d>::iterator it;
+            for (const auto& vec : vectorList){
+                Matrix<float, 3, 1> resultTip = transformationMatrix * vec->getTip();
+                Matrix<float, 3, 1> resultOrigin = transformationMatrix * vec->getOrigin();
+                LAVector3d* vectorToPrint = new LAVector3d(resultOrigin,resultTip);
+                vectorsToPrint.insert(vectorsToPrint.end(),vectorToPrint);
             }
-
+            int count = 1;
+            for (const auto& vec : vectorsToPrint){
+                //printf("vec %i ---- origin: %f, %f; tip: %f, %f \n", count, vec->getOrigin()(0), vec->getOrigin()(1), vec->getTip()(0), vec->getTip()(1));
+                vec->RenderDrawLine(this->getRenderer(), vec, RED );
+                count++;
+            }
+            vectorsToPrint.clear();
         }
 
         SDL_RenderPresent(this->getRenderer());
-        SDL_Delay(100);
+
+        end = SDL_GetPerformanceCounter();
+        elapsedMS = (end - start) / (float)SDL_GetPerformanceFrequency();
+        SDL_Delay(floor(16.666f - elapsedMS));
     }
     SDL_DestroyRenderer(this->getRenderer());
     SDL_DestroyWindow(this->getWindow());
@@ -188,4 +199,16 @@ const list<LAVector3d *> &Application::getVectorList() const {
 
 void Application::setVectorList(const list<LAVector3d *> &vectorList) {
     Application::vectorList = vectorList;
+}
+
+const list<LAVector3d *> &Application::getVectorsToPrint() const {
+    return vectorsToPrint;
+}
+
+void Application::setVectorsToPrint(const list<LAVector3d *> &vectorsToPrint) {
+    Application::vectorsToPrint = vectorsToPrint;
+}
+
+void Application::clearVectorsToPrint() {
+    vectorsToPrint.clear();
 }

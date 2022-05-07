@@ -22,6 +22,7 @@ private:
     bool running;
     SDL_Window* window;
     std::list<LAVector3d*> vectorList;
+    std::list<LAVector3d*> vectorsToPrint;
 public:
     const std::list<LAVector3d *> &getVectorList() const;
 
@@ -48,7 +49,11 @@ public:
 
     void PrintGrid(SDL_Renderer* renderer );
 
+    const std::list<LAVector3d *> &getVectorsToPrint() const;
 
+    void setVectorsToPrint(const std::list<LAVector3d *> &vectorsToPrint);
+
+    void clearVectorsToPrint();
 };
 
 
