@@ -6,13 +6,26 @@
 #include "../Include/Constants.h"
 
 int _cdecl LAVector3d::RenderDrawLine(SDL_Renderer *renderer, LAVector3d *vec, Array<int, 3, 1> color) {
-    Matrix<float, 2, 3> projectionMatrix{{1, 0, 0},
-                                         {0, 0, 1}};
-    Matrix<float, 2, 1> c{10, 10};
+    float ONE_OVER_TANGENT = 1/(tan(Constants::VIEW_DEGREE/2));
+    float ZFAR_OVER_ZNEAR = Constants::ZFAR / (Constants::ZFAR - Constants::ZNEAR);
 
-    Matrix<float, 2, 1> projectedVectorOrigin {{Constants::ORIGIN_X + vec->getOrigin()(0)}, {Constants::ORIGIN_Y + vec->getOrigin()(1)}};
-    Matrix<float, 2, 1> projectedVectorTip {{Constants::ORIGIN_X + vec->getTip()(0)}, {Constants::ORIGIN_Y + vec->getTip()(1)}};
-    printf("vec ---- origin: %f, %f; tip: %f, %f \n", projectedVectorOrigin(0),projectedVectorOrigin(1), projectedVectorTip(0), projectedVectorTip(1));
+    Matrix<float, 3, 3> projectionMatrix {{1, 0, 0},
+                                         {0, 1, 0},
+                                         {0, 0, 0}};
+
+    Matrix<float, 3, 3> otherProjectionMatrix {{0, 0, vec->getOrigin()(0)/vec->getOrigin()(2)},
+                                          {0, 0, vec->getOrigin()(1)/vec->getOrigin()(2)},
+                                          {0, 0, 1}};
+
+    projectionMatrix = projectionMatrix + otherProjectionMatrix;
+
+
+    Matrix<float, 3, 1> projectedVectorOrigin {{Constants::ORIGIN_X + vec->getOrigin()(0)}, {Constants::ORIGIN_Y + vec->getOrigin()(1)}, {vec->getOrigin()(2)}};
+    Matrix<float, 3, 1> projectedVectorTip {{Constants::ORIGIN_X + vec->getTip()(0)}, {Constants::ORIGIN_Y + vec->getTip()(1)}, {vec->getOrigin()(1)}};
+
+
+
+    //printf("vec ---- origin: X:%f, Y:%f Z:%f; tip: %f, %f, color: %i, %i, %i \n", projectedVectorOrigin(0),projectedVectorOrigin(1),projectedVectorOrigin(2), projectedVectorTip(0), projectedVectorTip(1), color(0), color(1), color(2));
     SetVectorColor(renderer, color);
     drawcircle(renderer, projectedVectorTip(0), projectedVectorTip(1), 3);
     return SDL_RenderDrawLineF(renderer,
@@ -58,27 +71,26 @@ void LAVector3d::drawcircle(SDL_Renderer *renderer, int x0, int y0, int radius) 
 }
 
 LAVector3d::LAVector3d() {
-    LAVector3d::origin = Matrix<float, 3, 1>{{0, 0}};
-    LAVector3d::tip = Matrix<float, 3, 1>{{0, 0}};
-    LAVector3d::color = Matrix<float, 3, 1>{{0, 0, 0}};
+    LAVector3d::origin = Matrix<float, 3, 1>{{0, 0, 0, 0}};
+    LAVector3d::tip = Matrix<float, 3, 1>{{0, 0, 0, 0}};
+    LAVector3d::color = Matrix<int, 3, 1>{{0, 0, 0}};
 }
 
 LAVector3d::LAVector3d(const Matrix<float, 3, 1> &tip) : tip(tip) {
     LAVector3d::tip = tip;
     if (this->getNextVector() == nullptr) {
-        LAVector3d::origin = Matrix<float, 3, 1>{{0, 0, 0}};
+        LAVector3d::origin = Matrix<float, 3, 1>{{0, 0, 0, 0}};
     } else {
         LAVector3d::origin = this->nextVector->getTip();
     }
-    LAVector3d::color = Matrix<float, 3, 1>{{255, 0, 0}};
+    LAVector3d::color = Matrix<int, 3, 1>{{255, 0, 0}};
 }
 
 LAVector3d::LAVector3d(const Matrix<float, 3, 1> &origin, const Matrix<float, 3, 1> &tip) : origin(origin), tip(tip) {
     LAVector3d::tip = tip;
     LAVector3d::origin = origin;
-    LAVector3d::color = Matrix<float, 3, 1>{{255, 0, 0}};
+    LAVector3d::color = Matrix<int, 3, 1>{{255, 0, 0}};
 }
-
 const Matrix<float, 3, 1> &LAVector3d::getOrigin() const {
     return origin;
 }
@@ -95,11 +107,11 @@ void LAVector3d::setTip(const Matrix<float, 3, 1> &tip) {
     LAVector3d::tip = tip;
 }
 
-const Matrix<float, 3, 1> &LAVector3d::getColor() const {
+const Matrix<int, 3, 1> &LAVector3d::getColor() const {
     return color;
 }
 
-void LAVector3d::setColor(const Matrix<float, 3, 1> &color) {
+void LAVector3d::setColor(const Matrix<int, 3, 1> &color) {
     LAVector3d::color = color;
 }
 
@@ -113,7 +125,20 @@ void LAVector3d::setNextVector(LAVector3d *nextVector) {
 
 LAVector3d::LAVector3d(LAVector3d *nextVector, const Matrix<float, 3, 1> &tip) : nextVector(nextVector), tip(tip) {
     LAVector3d::origin = nextVector->getTip();
-    LAVector3d::tip = tip + nextVector->getTip();
-    LAVector3d::color = Matrix<float, 3, 1>{{255, 0, 0}};
+    LAVector3d::tip = tip;
+    LAVector3d::color = Matrix<int, 3, 1>{{255, 0, 0}};
+}
+
+LAVector3d::LAVector3d(LAVector3d *nextVector, const Matrix<float, 3, 1> &tip, const Matrix<int, 3, 1> &color) : nextVector(nextVector), tip(tip), color(color) {
+    LAVector3d::tip = tip;
+    LAVector3d::origin = nextVector->getTip();
+    LAVector3d::color = color;
+}
+
+LAVector3d::LAVector3d(const Matrix<float, 3, 1> &origin, const Matrix<float, 3, 1> &tip,
+                       const Matrix<int, 3, 1> &color) : origin(origin), tip(tip), color(color) {
+    LAVector3d::tip = tip;
+    LAVector3d::origin = origin;
+    LAVector3d::color = color;
 }
 

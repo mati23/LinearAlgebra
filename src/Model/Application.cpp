@@ -19,7 +19,7 @@ using namespace std;
 using namespace Eigen;
 
 Array<int, 3, 1> RED{{255, 0, 0}};
-Array<int, 3, 1> GREEN{{0, 255, 0}};
+Matrix<int, 3, 1> GREEN {{0}, {255}, {0}};
 Array<int, 3, 1> BLUE{{0, 0, 255}};
 
 unordered_map<string, Matrix<float, 3, 1>>
@@ -90,11 +90,41 @@ void Application::setRenderer(SDL_Renderer *renderer) {
 }
 
 int Application::Run() {
-    LAVector3d *vec1 = new LAVector3d({20, 20, 0});
-    LAVector3d *vec2 = new LAVector3d(vec1, {30, 30, 0});
+    LAVector3d *vec1 = new LAVector3d({30, 30, 30},{-30, 30, 30}, {255, 0, 0});
+    LAVector3d *vec2 = new LAVector3d(vec1, {-30, -30, 30}, {255, 0, 0});
+    LAVector3d *vec3 = new LAVector3d(vec2, {30, -30, 30}, {255, 0, 0});
+    LAVector3d *vec4 = new LAVector3d(vec3, {30, 30, 30}, {255, 0, 0});
+
+    LAVector3d *vec5 = new LAVector3d(vec4, {30, 30, -30}, {0, 255, 0});
+
+
+    LAVector3d *vec6 = new LAVector3d(vec5, {-30, 30, -30}, {0, 0, 255});
+    LAVector3d *vec7 = new LAVector3d(vec6, {-30, -30, -30}, {0, 0, 255});
+    LAVector3d *vec8 = new LAVector3d(vec7, {-30, -30, -30}, {0, 0, 255});
+    LAVector3d *vec9 = new LAVector3d(vec8, {30, -30, -30}, {0, 0, 255});
+    LAVector3d *vec10 = new LAVector3d(vec9, {30, 30, -30}, {0, 0, 255});
+
+    LAVector3d *vec20 = new LAVector3d(vec9, {-30, -30, -30}, {0, 0, 255});
+
+    LAVector3d *vec2_7 = new LAVector3d(vec2, vec7->getTip(), {0, 255, 0});
+    LAVector3d *vec3_9 = new LAVector3d(vec3, vec9->getTip(), {0, 255, 0});
+    LAVector3d *vec4_10 = new LAVector3d(vec1, vec6->getTip(), {0, 255, 0});
+
 
     vectorList.insert(vectorList.end(),vec1);
     vectorList.insert(vectorList.end(),vec2);
+    vectorList.insert(vectorList.end(),vec3);
+    vectorList.insert(vectorList.end(),vec4);
+    vectorList.insert(vectorList.end(),vec5);
+    vectorList.insert(vectorList.end(),vec6);
+    vectorList.insert(vectorList.end(),vec7);
+    vectorList.insert(vectorList.end(),vec8);
+    vectorList.insert(vectorList.end(),vec9);
+    vectorList.insert(vectorList.end(),vec10);
+    vectorList.insert(vectorList.end(),vec20);
+    vectorList.insert(vectorList.end(),vec2_7);
+    vectorList.insert(vectorList.end(),vec3_9);
+    vectorList.insert(vectorList.end(),vec4_10);
 
     unordered_map<string, Matrix<float, 3, 1>> arrayOfVectors;
 
@@ -121,10 +151,15 @@ int Application::Run() {
 
         float degree = (count * (M_PI / 180.0));
 
-        Matrix<float, 3, 3> transformationMatrix
+        Matrix<float, 3, 3> transformationMatrixX
                 {{(float) 1, 0, 0},
                  {0, (float) cos(degree), (float) -sin(degree)},
                  {0, (float) sin(degree), (float) cos(degree)}};
+
+        Matrix<float, 3, 3> transformationMatrixY
+                {{(float) cos(degree), 0, (float) -sin(degree)},
+                 {0, 1, 0},
+                 {(float) -sin(degree), 0, (float) cos(degree)}};
 
         SDL_Texture *texture = SDL_CreateTexture(this->getRenderer(), SDL_PIXELFORMAT_RGBA8888,
                                                  SDL_TEXTUREACCESS_TARGET, 50, 10);
@@ -165,15 +200,20 @@ int Application::Run() {
         if (true) {
             std::list<LAVector3d>::iterator it;
             for (const auto& vec : vectorList){
-                Matrix<float, 3, 1> resultTip = transformationMatrix * vec->getTip();
-                Matrix<float, 3, 1> resultOrigin = transformationMatrix * vec->getOrigin();
-                LAVector3d* vectorToPrint = new LAVector3d(resultOrigin,resultTip);
+                Matrix<float, 3, 1> resultTip = (transformationMatrixX) * vec->getTip();
+                Matrix<float, 3, 1> resultOrigin = (transformationMatrixX ) * vec->getOrigin();
+
+                resultTip = (transformationMatrixY) * resultTip;
+                resultOrigin = (transformationMatrixY ) * resultOrigin;
+
+                LAVector3d* vectorToPrint = new LAVector3d(resultOrigin,resultTip, vec->getColor());
+                printf("vec %i ---- origin: %f, %f; tip: %f, %f, color: %i, %i, %i\n", count, vec->getOrigin()(0), vec->getOrigin()(1), vec->getTip()(0), vec->getTip()(1), vec->getColor()(0), vec->getColor()(1), vec->getColor()(2));
                 vectorsToPrint.insert(vectorsToPrint.end(),vectorToPrint);
             }
             int count = 1;
             for (const auto& vec : vectorsToPrint){
-                //printf("vec %i ---- origin: %f, %f; tip: %f, %f \n", count, vec->getOrigin()(0), vec->getOrigin()(1), vec->getTip()(0), vec->getTip()(1));
-                vec->RenderDrawLine(this->getRenderer(), vec, RED );
+                //printf("vec %i ---- origin: %f, %f; tip: %f, %f, color: %i, %i, %i\n", count, vec->getOrigin()(0), vec->getOrigin()(1), vec->getTip()(0), vec->getTip()(1), vec->getColor()(0), vec->getColor()(1), vec->getColor()(2));
+                vec->RenderDrawLine(this->getRenderer(), vec, vec->getColor() );
                 count++;
             }
             vectorsToPrint.clear();
@@ -183,7 +223,7 @@ int Application::Run() {
 
         end = SDL_GetPerformanceCounter();
         elapsedMS = (end - start) / (float)SDL_GetPerformanceFrequency();
-        SDL_Delay(floor(16.666f - elapsedMS));
+        SDL_Delay(floor(8.666f - elapsedMS));
     }
     SDL_DestroyRenderer(this->getRenderer());
     SDL_DestroyWindow(this->getWindow());

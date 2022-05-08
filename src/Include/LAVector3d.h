@@ -10,9 +10,10 @@ using namespace Eigen;
 
 class LAVector3d {
 private:
+
     Matrix<float, 3, 1> origin;
     Matrix<float, 3, 1> tip;
-    Matrix<float, 3, 1> color;
+    Matrix<int, 3, 1> color;
     LAVector3d* nextVector = nullptr;
 public:
     LAVector3d();
@@ -20,6 +21,8 @@ public:
     LAVector3d(const Matrix<float, 3, 1> &tip);
 
     LAVector3d(LAVector3d *nextVector,const Matrix<float, 3, 1> &tip);
+    LAVector3d(LAVector3d *nextVector,const Matrix<float, 3, 1> &tip, const Matrix<int, 3, 1> &color);
+    LAVector3d(const Matrix<float, 3, 1> &origin, const Matrix<float, 3, 1> &tip, const Matrix<int, 3, 1> &color);
 
     LAVector3d(const Matrix<float, 3, 1> &origin, const Matrix<float, 3, 1> &tip);
 
@@ -36,9 +39,9 @@ public:
 
     void setTip(const Matrix<float, 3, 1> &tip);
 
-    const Matrix<float, 3, 1> &getColor() const;
+    const Matrix<int, 3, 1> &getColor() const;
 
-    void setColor(const Matrix<float, 3, 1> &color);
+    void setColor(const Matrix<int, 3, 1> &color);
 
     LAVector3d *getNextVector() const;
 
